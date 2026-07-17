@@ -1,36 +1,160 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Modern Fire Safety Solution
 
-## Getting Started
+A modern, fully responsive marketing website for **Modern Fire Safety Solution** — an
+authorised fire-safety dealer — with authentication built in.
 
-First, run the development server:
+Built with **Next.js 16 (App Router)**, **React 19**, **Tailwind CSS v4**,
+**Better Auth** (Google + email/password), **Drizzle ORM**, and **Supabase Postgres**.
+
+> Inspired by the client's reference design and rebuilt from the ground up:
+> refined typography, a cohesive crimson/charcoal system, scroll-reveal motion,
+> accessible components, real authentication, and a working enquiry form that
+> persists to the database.
+
+---
+
+## ✨ Features
+
+- **11-section landing page** — hero, about, services, why-choose-us, training,
+  products, "how we help", quote form, CTA banner, contact (with live map + WhatsApp),
+  and footer.
+- **Authentication** with [Better Auth](https://better-auth.com):
+  - Google OAuth (social sign-in)
+  - Email + password (sign up / log in)
+  - Session-aware navbar and a protected `/account` page.
+- **Enquiry form** → server action → **Drizzle** insert into **Supabase Postgres**.
+- **Fully responsive**, keyboard-accessible, with `prefers-reduced-motion` support.
+
+## 🧱 Tech stack
+
+| Concern        | Choice                                   |
+| -------------- | ---------------------------------------- |
+| Framework      | Next.js 16 (App Router) + React 19 + TS  |
+| Styling        | Tailwind CSS v4 (CSS-first config)       |
+| Auth           | Better Auth (`better-auth/adapters/drizzle`) |
+| ORM            | Drizzle ORM (`postgres` / postgres.js)   |
+| Database       | Supabase Postgres                        |
+
+---
+
+## 🚀 Getting started
+
+### 1. Install dependencies
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+pnpm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 2. Configure environment
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+cp .env.example .env.local
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Fill in `.env.local`:
 
-## Learn More
+| Variable                | Description                                                        |
+| ----------------------- | ------------------------------------------------------------------ |
+| `NEXT_PUBLIC_APP_URL`   | Public base URL (e.g. `http://localhost:3000`).                    |
+| `BETTER_AUTH_SECRET`    | 32+ char secret. Generate with `openssl rand -base64 32`.          |
+| `BETTER_AUTH_URL`       | Base URL of the app (same as above in dev).                        |
+| `GOOGLE_CLIENT_ID`      | Google OAuth client ID.                                            |
+| `GOOGLE_CLIENT_SECRET`  | Google OAuth client secret.                                        |
+| `DATABASE_URL`          | Supabase Postgres connection string.                               |
 
-To learn more about Next.js, take a look at the following resources:
+**Google OAuth** — in the [Google Cloud Console](https://console.cloud.google.com/apis/credentials)
+create an OAuth 2.0 Client (Web application) and add this authorized redirect URI:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```
+http://localhost:3000/api/auth/callback/google
+https://YOUR_DOMAIN/api/auth/callback/google   # production
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+**Supabase** — from *Project Settings → Database → Connection string*, use the
+**Transaction pooler** URI (port `6543`) for `DATABASE_URL` (the app runtime uses
+`prepare: false` for pooler compatibility). For migrations you may swap in the
+**Direct connection** (port `5432`).
 
-## Deploy on Vercel
+### 3. Create the database tables
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+The Drizzle schema already includes the Better Auth tables (`db/auth-schema.ts`) and
+the app's `enquiries` table (`db/schema.ts`). Push it to Supabase:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+pnpm db:push
+# or, for a reviewable migration history:
+pnpm db:generate && pnpm db:migrate
+```
+
+> To regenerate the Better Auth schema after adding plugins: `pnpm auth:generate`.
+
+### 4. Run
+
+```bash
+pnpm dev
+```
+
+Open [http://localhost:3000](http://localhost:3000).
+
+---
+
+## 📜 Scripts
+
+| Script             | Purpose                                       |
+| ------------------ | --------------------------------------------- |
+| `pnpm dev`         | Start the dev server                          |
+| `pnpm build`       | Production build                              |
+| `pnpm start`       | Run the production build                      |
+| `pnpm lint`        | ESLint                                        |
+| `pnpm db:push`     | Push the Drizzle schema to the database       |
+| `pnpm db:generate` | Generate a SQL migration                      |
+| `pnpm db:migrate`  | Apply migrations                              |
+| `pnpm db:studio`   | Open Drizzle Studio                           |
+| `pnpm assets`      | Download site imagery into `/public/images`   |
+
+---
+
+## 🗂️ Project structure
+
+```
+app/
+  api/auth/[...all]/route.ts   Better Auth handler
+  actions/enquiry.ts           Server action: save enquiries
+  account/page.tsx             Protected page (server session check)
+  login/ · signup/             Auth pages
+  page.tsx                     Landing page (composes all sections)
+  layout.tsx · globals.css     Fonts, metadata, design system
+components/
+  site/                        Landing-page sections
+  auth/                        Auth form + sign-out
+  ui/                          Button, Logo, Icons
+db/
+  index.ts                     Drizzle client (postgres.js)
+  auth-schema.ts               Better Auth tables
+  schema.ts                    App tables (enquiries)
+lib/
+  auth.ts · auth-client.ts     Better Auth server + client
+  site.ts                      All site content, links & image URLs
+drizzle.config.ts
+```
+
+---
+
+## 🖼️ Imagery
+
+Site images are hosted on a CDN and referenced from `lib/site.ts` so the site renders
+out of the box. To **self-host** them instead:
+
+```bash
+pnpm assets           # downloads them into /public/images
+```
+
+Then point `IMAGES.*` in `lib/site.ts` at local paths (e.g. `/images/hero.jpg`).
+
+---
+
+## 🚢 Deployment
+
+Deploy to Vercel (or any Node host). Set all environment variables from the table
+above, and update `BETTER_AUTH_URL` / `NEXT_PUBLIC_APP_URL` plus the Google redirect
+URI to your production domain.

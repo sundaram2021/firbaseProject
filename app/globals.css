@@ -1,26 +1,159 @@
 @import "tailwindcss";
 
+/*
+  Modern Fire Safety Solution — design system
+  Palette: crimson (fire) + charcoal (authority) + warm cream (approachable)
+*/
+@theme {
+  /* Brand — fire red scale */
+  --color-brand-50:  #fff1f1;
+  --color-brand-100: #ffe0e1;
+  --color-brand-200: #ffc5c7;
+  --color-brand-300: #fb9ca0;
+  --color-brand-400: #f4646b;
+  --color-brand-500: #e11d2a;
+  --color-brand-600: #c81421;
+  --color-brand-700: #a5101b;
+  --color-brand-800: #85121b;
+  --color-brand-900: #6d141b;
+  --color-brand: #e11d2a;
+
+  /* Ink — near-black charcoals for hero / footer / dark sections */
+  --color-ink: #0d0e12;
+  --color-ink-800: #14161c;
+  --color-ink-700: #1d2029;
+  --color-ink-600: #2a2e39;
+
+  /* Warm neutrals */
+  --color-cream: #faf5ee;
+  --color-cream-200: #f4ebdd;
+  --color-sand: #efe6d6;
+
+  --font-display: var(--font-sora), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+
+  --shadow-soft: 0 1px 2px rgba(13, 14, 18, 0.04), 0 8px 24px -12px rgba(13, 14, 18, 0.12);
+  --shadow-card: 0 1px 0 rgba(13,14,18,0.03), 0 18px 40px -24px rgba(13, 14, 18, 0.28);
+  --shadow-glow: 0 24px 60px -20px rgba(225, 29, 42, 0.55);
+}
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: var(--color-cream);
+  --foreground: var(--color-ink);
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+* {
+  border-color: color-mix(in oklab, var(--color-ink) 12%, transparent);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 92px;
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: color-mix(in oklab, var(--color-brand) 85%, black 0%);
+  color: white;
+}
+
+h1, h2, h3, h4, h5 {
+  font-family: var(--font-display);
+  letter-spacing: -0.02em;
+  font-weight: 700;
+}
+
+/* ---------- Layout helpers ---------- */
+.wrap {
+  width: 100%;
+  max-width: 80rem;
+  margin-inline: auto;
+  padding-inline: 1.25rem;
+}
+@media (min-width: 640px)  { .wrap { padding-inline: 2rem; } }
+@media (min-width: 1024px) { .wrap { padding-inline: 2.5rem; } }
+
+/* Eyebrow label: — small caps with a dash */
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-family: var(--font-display);
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--color-brand-600);
+}
+.eyebrow::before {
+  content: "";
+  width: 1.75rem;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--color-brand-500);
+}
+.eyebrow.on-dark { color: var(--color-brand-300); }
+
+/* Gradient text accent */
+.text-gradient {
+  background: linear-gradient(100deg, var(--color-brand-500), #ff6b4a 60%, #ff9e5e);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Subtle grid / glow textures for dark sections */
+.bg-grid {
+  background-image:
+    linear-gradient(color-mix(in oklab, white 6%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in oklab, white 6%, transparent) 1px, transparent 1px);
+  background-size: 46px 46px;
+}
+.bg-ember {
+  background:
+    radial-gradient(60% 60% at 82% 8%, rgba(225,29,42,0.30), transparent 60%),
+    radial-gradient(50% 50% at 8% 92%, rgba(255,120,60,0.16), transparent 55%);
+}
+
+/* ---------- Reveal-on-scroll ---------- */
+.reveal {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.7s cubic-bezier(0.22, 0.61, 0.36, 1),
+              transform 0.7s cubic-bezier(0.22, 0.61, 0.36, 1);
+  will-change: opacity, transform;
+}
+.reveal.is-in { opacity: 1; transform: none; }
+
+@keyframes floaty {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-10px); }
+}
+.animate-floaty { animation: floaty 6s ease-in-out infinite; }
+
+@keyframes ring-pulse {
+  0%   { box-shadow: 0 0 0 0 rgba(225,29,42,0.55); }
+  70%  { box-shadow: 0 0 0 16px rgba(225,29,42,0); }
+  100% { box-shadow: 0 0 0 0 rgba(225,29,42,0); }
+}
+.animate-ring { animation: ring-pulse 2.4s ease-out infinite; }
+
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+.animate-marquee { animation: marquee 26s linear infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .reveal { opacity: 1; transform: none; transition: none; }
+  .animate-floaty, .animate-ring, .animate-marquee { animation: none; }
 }
