@@ -2,7 +2,11 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { desc, eq } from "drizzle-orm";
 import { auth } from "@/lib/auth";
+import { db } from "@/db";
+import { orders as ordersTable } from "@/db/schema";
+import { formatPrice } from "@/lib/products-catalog";
 import { Logo } from "@/components/ui/logo";
 import { Icon } from "@/components/ui/icons";
 import { SignOutButton } from "@/components/auth/sign-out-button";
@@ -15,6 +19,19 @@ export default async function AccountPage() {
   if (!session) redirect("/login");
 
   const { user } = session;
+
+  // Load this user's orders (scoped by userId). Fails soft if the DB is down.
+  let orders: (typeof ordersTable.$inferSelect)[] = [];
+  try {
+    orders = await db
+      .select()
+      .from(ordersTable)
+      .where(eq(ordersTable.userId, user.id))
+      .orderBy(desc(ordersTable.createdAt));
+  } catch (error) {
+    console.warn("[account] could not load orders:", error);
+  }
+
   const initial = (user.name || user.email || "?").charAt(0).toUpperCase();
   const memberSince = user.createdAt
     ? new Date(user.createdAt).toLocaleDateString("en-IN", {
@@ -108,6 +125,68 @@ export default async function AccountPage() {
             </div>
           </div>
         </div>
+
+        <section className="mt-14">
+          <div className="flex items-center justify-between gap-4">
+            <h2 className="text-2xl text-ink">My orders</h2>
+            <Link href="/#products" className="text-sm font-semibold text-brand-600 hover:text-brand-700">
+              Browse products
+            </Link>
+          </div>
+
+          {orders.length === 0 ? (
+            <div className="mt-6 rounded-2xl border border-dashed border-ink/15 bg-white/60 p-10 text-center">
+              <p className="text-ink/60">
+                You haven&apos;t placed any orders yet.
+              </p>
+              <Link
+                href="/#products"
+                className="mt-4 inline-flex h-11 items-center justify-center rounded-full bg-brand-500 px-6 text-sm font-semibold text-white transition-colors hover:bg-brand-600"
+              >
+                Shop fire safety equipment
+              </Link>
+            </div>
+          ) : (
+            <ul className="mt-6 grid gap-3">
+              {orders.map((order) => (
+                <li
+                  key={order.id}
+                  className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-ink/10 bg-white p-5"
+                >
+                  <div>
+                    <p className="font-semibold text-ink">
+                      {order.productTitle}
+                      <span className="ml-2 text-sm font-normal text-ink/50">
+                        × {order.quantity}
+                      </span>
+                    </p>
+                    <p className="mt-0.5 text-sm text-ink/55">
+                      {new Date(order.createdAt).toLocaleDateString("en-IN", {
+                        day: "numeric",
+                        month: "short",
+                        year: "numeric",
+                      })}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <span className="font-semibold text-ink">
+                      {formatPrice(order.amountTotal, order.currency)}
+                    </span>
+                    <span
+                      className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold capitalize ${
+                        order.status === "paid"
+                          ? "bg-green-600/10 text-green-700"
+                          : "bg-amber-500/10 text-amber-700"
+                      }`}
+                    >
+                      {order.status}
+                    </span>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
       </main>
     </div>
   );

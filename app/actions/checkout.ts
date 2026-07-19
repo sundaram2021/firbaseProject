@@ -51,11 +51,8 @@ export async function startCheckout(
 
   try {
     const checkout = await stripe.checkout.sessions.create({
-      // The Stripe types in the installed SDK may not yet include the
-      // `embedded` ui_mode value. Silence the TypeScript check here — the
-      // runtime accepts the field and Stripe supports embedded checkout.
-      // @ts-ignore
-      ui_mode: "embedded",
+      ui_mode: "embedded_page",
+
       redirect_on_completion: "never",
       mode: "payment",
       line_items: [

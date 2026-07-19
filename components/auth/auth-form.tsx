@@ -13,7 +13,13 @@ const perks = [
   "One partner for install, refilling & AMC",
 ];
 
-export function AuthForm({ mode }: { mode: "login" | "signup" }) {
+export function AuthForm({
+  mode,
+  redirectTo = "/account",
+}: {
+  mode: "login" | "signup";
+  redirectTo?: string;
+}) {
   const router = useRouter();
   const isSignup = mode === "signup";
   const [loading, setLoading] = useState(false);
@@ -39,7 +45,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
         setLoading(false);
         return;
       }
-      router.push("/account");
+      router.push(redirectTo);
       router.refresh();
     } catch {
       setError("Unexpected error. Please try again.");
@@ -51,7 +57,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
     setError(null);
     setGoogleLoading(true);
     try {
-      await signIn.social({ provider: "google", callbackURL: "/account" });
+      await signIn.social({ provider: "google", callbackURL: redirectTo });
     } catch {
       setError("Could not start Google sign-in. Please try again.");
       setGoogleLoading(false);
@@ -165,7 +171,11 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
           <p className="mt-6 text-center text-sm text-ink/60">
             {isSignup ? "Already have an account? " : "Don't have an account? "}
             <Link
-              href={isSignup ? "/login" : "/signup"}
+              href={`${isSignup ? "/login" : "/signup"}${
+                redirectTo && redirectTo !== "/account"
+                  ? `?redirect=${encodeURIComponent(redirectTo)}`
+                  : ""
+              }`}
               className="font-semibold text-brand-600 hover:text-brand-700"
             >
               {isSignup ? "Log in" : "Sign up"}

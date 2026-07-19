@@ -78,3 +78,13 @@ export const verification = pgTable(
   },
   (t) => [index("verification_identifier_idx").on(t.identifier)],
 );
+export const products = pgTable("products", {
+  slug: text("slug").primaryKey(),
+  title: text("title").notNull(),
+  summary: text("summary").notNull(),
+  description: text("description").notNull(),
+  image: text("image").notNull(),
+  priceInCents: text("price_in_cents").notNull(),
+  currency: text("currency").default("USD").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
