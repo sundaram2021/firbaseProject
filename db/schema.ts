@@ -11,6 +11,8 @@ export const enquiries = pgTable("enquiries", {
   message: text("message").notNull(),
   /** Where the submission came from, e.g. "quote-form" | "contact". */
   source: text("source").default("quote-form").notNull(),
+  /** SHA-256 of the submitter's IP — privacy-safe key for rate limiting. */
+  ipHash: text("ip_hash"),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 

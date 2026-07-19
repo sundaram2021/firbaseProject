@@ -8,24 +8,6 @@ const quickLinks = [
   { label: "Training", href: "#training" },
 ];
 
-const socials = [
-  {
-    name: "Facebook",
-    href: "#",
-    path: "M13.5 21v-8h2.5l.5-3h-3V8.2c0-.9.3-1.5 1.6-1.5H17V4.1c-.3 0-1.2-.1-2.3-.1-2.3 0-3.9 1.4-3.9 4v2.2H8v3h2.8v8z",
-  },
-  {
-    name: "Instagram",
-    href: "#",
-    path: "M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8m0 1.5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5M16.5 3h-9A4.5 4.5 0 0 0 3 7.5v9A4.5 4.5 0 0 0 7.5 21h9a4.5 4.5 0 0 0 4.5-4.5v-9A4.5 4.5 0 0 0 16.5 3m3 13.5a3 3 0 0 1-3 3h-9a3 3 0 0 1-3-3v-9a3 3 0 0 1 3-3h9a3 3 0 0 1 3 3zM17.8 6.6a1 1 0 1 0 0 2 1 1 0 0 0 0-2",
-  },
-  {
-    name: "LinkedIn",
-    href: "#",
-    path: "M6.94 5a1.94 1.94 0 1 1-3.88 0 1.94 1.94 0 0 1 3.88 0M3.3 8.4h3.3V21H3.3zM9.1 8.4h3.16v1.72h.05c.44-.83 1.5-1.72 3.1-1.72 3.32 0 3.93 2.18 3.93 5v6.6h-3.28v-5.85c0-1.4 0-3.19-1.94-3.19s-2.24 1.52-2.24 3.09V21H9.1z",
-  },
-];
-
 export function Footer() {
   return (
     <footer className="relative bg-ink text-white/70">
@@ -37,20 +19,6 @@ export function Footer() {
             Complete fire safety solutions — installation, alarm systems, extinguisher
             supply, refilling, AMC, testing and commissioning.
           </p>
-          <div className="mt-6 flex gap-3">
-            {socials.map((s) => (
-              <a
-                key={s.name}
-                href={s.href}
-                aria-label={s.name}
-                className="grid h-10 w-10 place-items-center rounded-full border border-white/12 text-white/70 transition-colors hover:border-brand-500 hover:bg-brand-500 hover:text-white"
-              >
-                <svg viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4" aria-hidden="true">
-                  <path d={s.path} />
-                </svg>
-              </a>
-            ))}
-          </div>
         </div>
 
         <FooterCol title="Quick Links">

@@ -153,8 +153,33 @@ Then point `IMAGES.*` in `lib/site.ts` at local paths (e.g. `/images/hero.jpg`).
 
 ---
 
+## 🔒 Security & production hardening
+
+- **Rate limiting**
+  - Auth: Better Auth rate limiting with **database storage** (holds across serverless
+    instances). Stricter caps on `/sign-in/email`, `/sign-up/email`, `/forget-password`.
+  - Enquiry form: per-email (3 / hour) and per-IP (8 / 10 min), keyed on a SHA-256 hash
+    of the IP (`enquiries.ip_hash`) — no raw IPs stored.
+  - Checkout: per-user throttle on Stripe session creation.
+- **Email hardening** (`lib/email.ts`) — addresses are normalised (trim + lowercase),
+  format-validated, and disposable/temporary domains are rejected. Enforced on sign-up
+  (`databaseHooks.user.create.before`, covering Google + email) and on the enquiry form.
+- **Spam protection** (enquiry form) — hidden honeypot field, a minimum time-to-submit
+  check, and a link-stuffing heuristic. Bot submissions get a generic success response
+  so they learn nothing.
+- **HTTP security headers** (`next.config.ts`) — `X-Content-Type-Options`,
+  `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`, HSTS; `poweredByHeader` off.
+- **CSRF** — Better Auth `trustedOrigins` derived from `BETTER_AUTH_URL` / `NEXT_PUBLIC_APP_URL`.
+- **SEO** — `app/robots.ts` and `app/sitemap.ts` (excludes `/account` and `/api`).
+
+> **Migration required:** these changes add the Better Auth `rateLimit` table and the
+> `enquiries.ip_hash` column. Run `pnpm db:push` (or `db:generate` + `db:migrate`) when
+> deploying.
+
+---
+
 ## 🚢 Deployment
 
 Deploy to Vercel (or any Node host). Set all environment variables from the table
 above, and update `BETTER_AUTH_URL` / `NEXT_PUBLIC_APP_URL` plus the Google redirect
-URI to your production domain.
+URI to your production domain. Then run `pnpm db:push` against the production database.
