@@ -12,6 +12,15 @@ import { Contact } from "@/components/site/contact";
 import { Footer } from "@/components/site/footer";
 import { ScrollToTop } from "@/components/site/scroll-to-top";
 
+/**
+ * Render on demand so product prices in the <Products /> section are always
+ * read live from the database — keeping them consistent with the product
+ * detail page and Stripe checkout (both of which read the DB per request).
+ * Without this the home page would be statically prerendered and could show
+ * stale, build-time prices.
+ */
+export const dynamic = "force-dynamic";
+
 export default function Home() {
   return (
     <>

@@ -1,7 +1,7 @@
 "use server";
 
 import { headers } from "next/headers";
-import { eq } from "drizzle-orm";
+import { and, count, eq, gte } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { stripe } from "@/lib/stripe";
 import { db } from "@/db";
@@ -43,6 +43,21 @@ export async function startCheckout(
   }
 
   const qty = Math.min(Math.max(Math.trunc(Number(quantity)) || 1, 1), MAX_QTY);
+
+  // Throttle checkout-session creation per user (fails open if DB unreachable).
+  try {
+    const [recent] = await db
+      .select({ n: count() })
+      .from(orders)
+      .where(
+        and(eq(orders.userId, session.user.id), gte(orders.createdAt, new Date(Date.now() - 60_000))),
+      );
+    if (Number(recent?.n ?? 0) >= 5) {
+      return { ok: false, error: "You're going a little fast — please wait a moment and try again." };
+    }
+  } catch (err) {
+    console.warn("[checkout] throttle check skipped:", err);
+  }
 
   const product = await findProduct(slug);
   if (!product) {

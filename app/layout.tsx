@@ -16,7 +16,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://modernfiresafety.example"),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "https://modernfiresafety.example"),
   title: {
     default: "Modern Fire Safety Solution — Complete Fire Safety Solution",
     template: "%s · Modern Fire Safety Solution",

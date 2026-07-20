@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect, useRef } from "react";
 import { useFormStatus } from "react-dom";
 import { submitEnquiry, type EnquiryState } from "@/app/actions/enquiry";
 import { Icon } from "@/components/ui/icons";
@@ -34,6 +34,12 @@ export function EnquiryForm() {
   const [state, formAction] = useActionState<EnquiryState, FormData>(submitEnquiry, {
     status: "idle",
   });
+  // Stamp the render time (client-side) so the server can reject near-instant,
+  // bot-like submits. Written straight to the DOM to avoid a re-render.
+  const renderedAtRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (renderedAtRef.current) renderedAtRef.current.value = String(Date.now());
+  }, []);
 
   return (
     <section id="quote" className="scroll-mt-24 bg-cream py-20 sm:py-28">
@@ -92,6 +98,7 @@ export function EnquiryForm() {
             ) : (
               <form action={formAction} className="flex flex-col gap-4">
                 <input type="hidden" name="source" value="quote-form" />
+                <input ref={renderedAtRef} type="hidden" name="ts" defaultValue="" />
                 {/* honeypot */}
                 <input
                   type="text"

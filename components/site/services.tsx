@@ -22,10 +22,6 @@ export function Services() {
                 </span>
                 <h3 className="mt-5 text-xl text-ink">{s.title}</h3>
                 <p className="mt-2.5 text-[0.95rem] leading-relaxed text-ink/60">{s.desc}</p>
-                <span className="mt-5 inline-flex items-center gap-1.5 text-sm font-semibold text-brand-600 opacity-0 transition-all duration-300 group-hover:opacity-100">
-                  Learn more
-                  <Icon name="arrowRight" className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
-                </span>
               </article>
             </Reveal>
           ))}

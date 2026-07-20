@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { Reveal } from "./reveal";
 import { SectionHeading } from "./section-heading";
-import { Icon } from "@/components/ui/icons";
 import { getProducts, formatPrice } from "@/lib/products";
 
 export async function Products() {
@@ -33,12 +32,7 @@ export async function Products() {
                   />
                 </div>
                 <div className="flex flex-1 flex-col p-6">
-                  <div className="flex items-start justify-between gap-3">
-                    <h3 className="text-lg text-ink">{p.title}</h3>
-                    <span className="mt-1 grid h-8 w-8 shrink-0 place-items-center rounded-full bg-brand-500/10 text-brand-600 transition-colors duration-300 group-hover:bg-brand-500 group-hover:text-white">
-                      <Icon name="arrowRight" className="h-4 w-4" />
-                    </span>
-                  </div>
+                  <h3 className="text-lg text-ink">{p.title}</h3>
                   <p className="mt-1 text-sm leading-snug text-ink/60">{p.summary}</p>
                   <div className="mt-4 flex items-center justify-between border-t border-ink/10 pt-4">
                     <span className="text-lg font-semibold text-ink">

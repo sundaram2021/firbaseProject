@@ -3,7 +3,7 @@
  * Matches the default schema produced by `npx @better-auth/cli generate`.
  * Regenerate with `pnpm auth:generate` if you add Better Auth plugins.
  */
-import { pgTable, text, timestamp, boolean, index } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, boolean, integer, bigint, index } from "drizzle-orm/pg-core";
 
 export const user = pgTable("user", {
   id: text("id").primaryKey(),
@@ -78,13 +78,13 @@ export const verification = pgTable(
   },
   (t) => [index("verification_identifier_idx").on(t.identifier)],
 );
-export const products = pgTable("products", {
-  slug: text("slug").primaryKey(),
-  title: text("title").notNull(),
-  summary: text("summary").notNull(),
-  description: text("description").notNull(),
-  image: text("image").notNull(),
-  priceInCents: text("price_in_cents").notNull(),
-  currency: text("currency").default("USD").notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
+/**
+ * Better Auth rate-limit store (used because rateLimit.storage = "database").
+ * Model name must stay "rateLimit" so the adapter can find it.
+ */
+export const rateLimit = pgTable("rateLimit", {
+  id: text("id").primaryKey(),
+  key: text("key"),
+  count: integer("count"),
+  lastRequest: bigint("last_request", { mode: "number" }),
 });
