@@ -36,6 +36,12 @@ export const products = pgTable("products", {
   /** Price in the smallest currency unit (paise for INR). */
   priceInCents: integer("price_in_cents").notNull(),
   currency: text("currency").default("inr").notNull(),
+  /** Manufacturer / brand, e.g. "Honeywell". */
+  brand: text("brand").notNull().default(""),
+  /** Product category, e.g. "Fire Extinguisher". */
+  category: text("category").notNull().default(""),
+  /** Units in stock — editable by admins, decremented as orders are paid. */
+  quantity: integer("quantity").notNull().default(0),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
@@ -62,8 +68,23 @@ export const orders = pgTable("orders", {
   currency: text("currency").default("inr").notNull(),
   status: text("status").default("pending").notNull(),
   stripeSessionId: text("stripe_session_id"),
+  /** Delivery contact captured at checkout. */
+  phone: text("phone"),
+  address: text("address"),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
 export type Order = typeof orders.$inferSelect;
 export type NewOrder = typeof orders.$inferInsert;
+
+/**
+ * Admin allow-list. Any authenticated user whose email is in this table gets
+ * admin permissions (manage product pricing/stock, view all purchases).
+ * Emails are stored lowercased to match Better Auth's normalised user emails.
+ */
+export const admins = pgTable("admins", {
+  email: text("email").primaryKey(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+export type Admin = typeof admins.$inferSelect;

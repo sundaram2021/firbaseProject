@@ -39,7 +39,7 @@ export const IMAGES = {
 export const navLinks = [
   { label: "About", href: "#about" },
   { label: "Services", href: "#services" },
-  { label: "Products", href: "#products" },
+  { label: "Products", href: "/products" },
   { label: "Training", href: "#training" },
   { label: "Help", href: "#help" },
   { label: "Contact", href: "#contact" },

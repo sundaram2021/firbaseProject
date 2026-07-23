@@ -7,31 +7,37 @@ import {
   EmbeddedCheckoutProvider,
 } from "@stripe/react-stripe-js";
 import { loadStripe } from "@stripe/stripe-js";
-import { startCheckout, confirmCheckout } from "@/app/actions/checkout";
+import { startCheckout, confirmCheckout, type ContactInput } from "@/app/actions/checkout";
 import { Icon } from "@/components/ui/icons";
 
 const stripePromise = loadStripe(
   process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY as string,
 );
 
-type Status = "checkout" | "confirming" | "paid" | "unpaid" | "error";
+type Status = "details" | "checkout" | "confirming" | "paid" | "unpaid" | "error";
+
+const fieldCls =
+  "h-12 w-full rounded-xl border border-ink/12 bg-white px-4 text-[0.95rem] text-ink outline-none transition-colors placeholder:text-ink/35 focus:border-brand-400 focus:ring-4 focus:ring-brand-500/10";
 
 export function CheckoutDialog({
   slug,
   quantity,
   productTitle,
+  defaultName = "",
   onClose,
 }: {
   slug: string;
   quantity: number;
   productTitle: string;
+  defaultName?: string;
   onClose: () => void;
 }) {
-  const [status, setStatus] = useState<Status>("checkout");
+  const [status, setStatus] = useState<Status>("details");
   const [message, setMessage] = useState<string | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
   const sessionIdRef = useRef<string | null>(null);
+  const contactRef = useRef<ContactInput | null>(null);
 
-  // Lock body scroll while the dialog is open.
   useEffect(() => {
     document.body.style.overflow = "hidden";
     return () => {
@@ -39,8 +45,27 @@ export function CheckoutDialog({
     };
   }, []);
 
+  const handleDetails = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const fd = new FormData(e.currentTarget);
+    const name = String(fd.get("name") ?? "").trim();
+    const phone = String(fd.get("phone") ?? "").trim();
+    const address = String(fd.get("address") ?? "").trim();
+    if (phone.replace(/\D/g, "").length < 7) {
+      setFormError("Please enter a valid phone number.");
+      return;
+    }
+    if (address.length < 8) {
+      setFormError("Please enter a complete delivery address.");
+      return;
+    }
+    setFormError(null);
+    contactRef.current = { name, phone, address };
+    setStatus("checkout");
+  };
+
   const fetchClientSecret = useCallback(async () => {
-    const res = await startCheckout(slug, quantity);
+    const res = await startCheckout(slug, quantity, contactRef.current ?? undefined);
     if (!res.ok) {
       setMessage(res.error);
       setStatus("error");
@@ -66,6 +91,13 @@ export function CheckoutDialog({
     }
   }, []);
 
+  const heading =
+    status === "paid"
+      ? "Order confirmed"
+      : status === "details"
+        ? "Delivery details"
+        : "Complete your purchase";
+
   return (
     <div
       className="fixed inset-0 z-[60] flex items-start justify-center overflow-y-auto bg-ink/60 p-4 backdrop-blur-sm sm:p-6"
@@ -75,9 +107,7 @@ export function CheckoutDialog({
     >
       <div className="relative my-auto w-full max-w-xl rounded-2xl border border-ink/10 bg-white shadow-card">
         <div className="flex items-center justify-between border-b border-ink/10 px-5 py-4">
-          <h2 className="text-lg font-semibold text-ink">
-            {status === "paid" ? "Order confirmed" : "Complete your purchase"}
-          </h2>
+          <h2 className="text-lg font-semibold text-ink">{heading}</h2>
           <button
             type="button"
             onClick={onClose}
@@ -89,6 +119,44 @@ export function CheckoutDialog({
         </div>
 
         <div className="p-5">
+          {status === "details" && (
+            <form onSubmit={handleDetails} className="flex flex-col gap-4">
+              <p className="text-sm text-ink/60">
+                We&apos;ll use these details to deliver and install your order.
+              </p>
+              <label className="flex flex-col gap-1.5">
+                <span className="text-sm font-medium text-ink/70">Full name</span>
+                <input name="name" defaultValue={defaultName} required placeholder="Rama Kant" className={fieldCls} />
+              </label>
+              <label className="flex flex-col gap-1.5">
+                <span className="text-sm font-medium text-ink/70">Phone number</span>
+                <input name="phone" required inputMode="tel" placeholder="97175 35602" className={fieldCls} />
+              </label>
+              <label className="flex flex-col gap-1.5">
+                <span className="text-sm font-medium text-ink/70">Delivery address</span>
+                <textarea
+                  name="address"
+                  required
+                  rows={3}
+                  placeholder="House / flat, street, area, city, PIN code"
+                  className={`${fieldCls} h-auto resize-none py-3`}
+                />
+              </label>
+              {formError && (
+                <p className="rounded-xl bg-brand-500/10 px-4 py-3 text-sm font-medium text-brand-700">
+                  {formError}
+                </p>
+              )}
+              <button
+                type="submit"
+                className="mt-1 inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-brand-500 font-semibold text-white shadow-[0_12px_30px_-10px_rgba(225,29,42,0.8)] transition-colors hover:bg-brand-600"
+              >
+                Continue to payment
+                <Icon name="arrowRight" className="h-4 w-4" />
+              </button>
+            </form>
+          )}
+
           {status === "checkout" && (
             <EmbeddedCheckoutProvider
               stripe={stripePromise}
@@ -134,8 +202,7 @@ export function CheckoutDialog({
             <div className="py-8 text-center">
               <h3 className="text-lg text-ink">Payment not completed</h3>
               <p className="mt-2 text-ink/60">
-                Your payment wasn&apos;t completed. You can close this window and
-                try again.
+                Your payment wasn&apos;t completed. You can close this window and try again.
               </p>
               <button
                 type="button"

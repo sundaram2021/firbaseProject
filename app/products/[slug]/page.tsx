@@ -40,7 +40,10 @@ export default async function ProductPage({
 
   if (!product) notFound();
 
-  const related = all.filter((p) => p.slug !== product.slug).slice(0, 3);
+  const related = [
+    ...all.filter((p) => p.slug !== product.slug && p.category === product.category),
+    ...all.filter((p) => p.slug !== product.slug && p.category !== product.category),
+  ].slice(0, 3);
 
   return (
     <div className="min-h-screen bg-cream">
@@ -59,7 +62,7 @@ export default async function ProductPage({
             Home
           </Link>
           <span aria-hidden>/</span>
-          <Link href="/#products" className="hover:text-ink">
+          <Link href="/products" className="hover:text-ink">
             Products
           </Link>
           <span aria-hidden>/</span>
@@ -77,7 +80,9 @@ export default async function ProductPage({
           </div>
 
           <div className="flex flex-col">
-            <span className="eyebrow">Fire safety equipment</span>
+            <span className="eyebrow">
+              {product.brand ? `${product.brand} · ${product.category}` : "Fire safety equipment"}
+            </span>
             <h1 className="mt-3 text-3xl text-ink text-balance sm:text-4xl">
               {product.title}
             </h1>
@@ -106,7 +111,9 @@ export default async function ProductPage({
                 title={product.title}
                 priceInCents={product.priceInCents}
                 currency={product.currency}
+                stock={product.quantity}
                 isAuthenticated={Boolean(session)}
+                customerName={session?.user.name ?? ""}
               />
             </div>
           </div>

@@ -4,6 +4,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { desc, eq } from "drizzle-orm";
 import { auth } from "@/lib/auth";
+import { isAdminEmail } from "@/lib/admin";
 import { db } from "@/db";
 import { orders as ordersTable } from "@/db/schema";
 import { formatPrice } from "@/lib/products-catalog";
@@ -19,6 +20,7 @@ export default async function AccountPage() {
   if (!session) redirect("/login");
 
   const { user } = session;
+  const admin = await isAdminEmail(user.email);
 
   // Load this user's orders (scoped by userId). Fails soft if the DB is down.
   let orders: (typeof ordersTable.$inferSelect)[] = [];
@@ -48,7 +50,23 @@ export default async function AccountPage() {
           <Link href="/">
             <Logo tone="dark" />
           </Link>
-          <SignOutButton />
+          <div className="flex items-center gap-1.5">
+            <Link
+              href="/products"
+              className="rounded-full px-4 py-2 text-sm font-medium text-ink/70 transition-colors hover:bg-ink/5 hover:text-ink"
+            >
+              Products
+            </Link>
+            {admin && (
+              <Link
+                href="/admin"
+                className="rounded-full px-4 py-2 text-sm font-semibold text-brand-600 transition-colors hover:bg-brand-500/10"
+              >
+                Admin
+              </Link>
+            )}
+            <SignOutButton />
+          </div>
         </div>
       </header>
 
@@ -129,7 +147,7 @@ export default async function AccountPage() {
         <section className="mt-14">
           <div className="flex items-center justify-between gap-4">
             <h2 className="text-2xl text-ink">My orders</h2>
-            <Link href="/#products" className="text-sm font-semibold text-brand-600 hover:text-brand-700">
+            <Link href="/products" className="text-sm font-semibold text-brand-600 hover:text-brand-700">
               Browse products
             </Link>
           </div>
@@ -140,7 +158,7 @@ export default async function AccountPage() {
                 You haven&apos;t placed any orders yet.
               </p>
               <Link
-                href="/#products"
+                href="/products"
                 className="mt-4 inline-flex h-11 items-center justify-center rounded-full bg-brand-500 px-6 text-sm font-semibold text-white transition-colors hover:bg-brand-600"
               >
                 Shop fire safety equipment

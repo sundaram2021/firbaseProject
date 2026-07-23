@@ -1,7 +1,7 @@
 "use server";
 
 import { headers } from "next/headers";
-import { and, count, eq, gte } from "drizzle-orm";
+import { and, count, eq, gte, ne, sql } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { stripe } from "@/lib/stripe";
 import { db } from "@/db";
@@ -9,6 +9,8 @@ import { orders, products as productsTable } from "@/db/schema";
 import { PRODUCT_CATALOG, type ProductView } from "@/lib/products-catalog";
 
 const MAX_QTY = 20;
+
+export type ContactInput = { name?: string; phone: string; address: string };
 
 /** Look up a product on the server (DB first, static catalogue fallback). */
 async function findProduct(slug: string): Promise<ProductView | null> {
@@ -32,17 +34,29 @@ export type StartCheckoutResult =
 /**
  * Starts a Stripe Checkout session for a product. Only authenticated users may
  * purchase. The price is always taken from the server, never the client.
+ * Requires a delivery contact (phone + address), stored on the pending order.
  */
 export async function startCheckout(
   slug: string,
   quantity = 1,
+  contact?: ContactInput,
 ): Promise<StartCheckoutResult> {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) {
     return { ok: false, error: "Please sign in to purchase.", requiresAuth: true };
   }
 
-  const qty = Math.min(Math.max(Math.trunc(Number(quantity)) || 1, 1), MAX_QTY);
+  // Validate delivery contact.
+  const phone = (contact?.phone ?? "").trim();
+  const address = (contact?.address ?? "").trim();
+  if (phone.replace(/\D/g, "").length < 7) {
+    return { ok: false, error: "Please enter a valid phone number." };
+  }
+  if (address.length < 8) {
+    return { ok: false, error: "Please enter a complete delivery address." };
+  }
+
+  let qty = Math.min(Math.max(Math.trunc(Number(quantity)) || 1, 1), MAX_QTY);
 
   // Throttle checkout-session creation per user (fails open if DB unreachable).
   try {
@@ -64,20 +78,25 @@ export async function startCheckout(
     return { ok: false, error: "This product is no longer available." };
   }
 
+  // Enforce stock (best-effort: only when we have a real quantity value).
+  if (typeof product.quantity === "number") {
+    if (product.quantity <= 0) {
+      return { ok: false, error: "This product is currently out of stock." };
+    }
+    if (qty > product.quantity) qty = product.quantity;
+  }
+
   try {
     const checkout = await stripe.checkout.sessions.create({
       ui_mode: "embedded_page",
-
       redirect_on_completion: "never",
       mode: "payment",
+      customer_email: session.user.email ?? undefined,
       line_items: [
         {
           price_data: {
             currency: product.currency,
-            product_data: {
-              name: product.title,
-              description: product.summary,
-            },
+            product_data: { name: product.title, description: product.summary },
             unit_amount: product.priceInCents,
           },
           quantity: qty,
@@ -87,6 +106,8 @@ export async function startCheckout(
         userId: session.user.id,
         slug: product.slug,
         quantity: String(qty),
+        phone: phone.slice(0, 40),
+        address: address.slice(0, 480),
       },
     });
 
@@ -94,8 +115,7 @@ export async function startCheckout(
       return { ok: false, error: "Could not start checkout. Please try again." };
     }
 
-    // Record a pending order. Best-effort: if the DB is unavailable the
-    // payment can still proceed and be reconciled from the Stripe dashboard.
+    // Record a pending order (best-effort).
     try {
       await db.insert(orders).values({
         userId: session.user.id,
@@ -106,6 +126,8 @@ export async function startCheckout(
         currency: product.currency,
         status: "pending",
         stripeSessionId: checkout.id,
+        phone,
+        address,
       });
     } catch (error) {
       console.warn("[checkout] could not record pending order:", error);
@@ -123,9 +145,9 @@ export type ConfirmCheckoutResult =
   | { ok: false; error: string };
 
 /**
- * Confirms a completed checkout by reading the session directly from Stripe
- * and, if paid, marking the matching order as "paid". Called after the
- * embedded checkout reports completion.
+ * Confirms a completed checkout by reading the session from Stripe and, if paid,
+ * marking the matching order "paid" and decrementing stock. Idempotent: stock is
+ * only reduced on the transition into "paid".
  */
 export async function confirmCheckout(
   sessionId: string,
@@ -139,12 +161,22 @@ export async function confirmCheckout(
 
     if (paid && checkout.metadata?.userId === session.user.id) {
       try {
-        await db
+        // Only newly-paid orders return a row → decrement stock exactly once.
+        const updated = await db
           .update(orders)
           .set({ status: "paid" })
-          .where(eq(orders.stripeSessionId, sessionId));
+          .where(and(eq(orders.stripeSessionId, sessionId), ne(orders.status, "paid")))
+          .returning({ slug: orders.productSlug, qty: orders.quantity });
+
+        if (updated.length > 0) {
+          const { slug, qty } = updated[0];
+          await db
+            .update(productsTable)
+            .set({ quantity: sql`greatest(${productsTable.quantity} - ${qty}, 0)` })
+            .where(eq(productsTable.slug, slug));
+        }
       } catch (error) {
-        console.warn("[checkout] could not mark order paid:", error);
+        console.warn("[checkout] could not finalise paid order:", error);
       }
     }
 

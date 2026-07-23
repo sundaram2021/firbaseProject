@@ -61,6 +61,8 @@ Fill in `.env.local`:
 | `GOOGLE_CLIENT_ID`      | Google OAuth client ID.                                            |
 | `GOOGLE_CLIENT_SECRET`  | Google OAuth client secret.                                        |
 | `DATABASE_URL`          | Supabase Postgres connection string.                               |
+| `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` / `STRIPE_SECRET_KEY` | Stripe keys for checkout.        |
+| `ADMIN_EMAILS`          | Comma-separated emails granted admin access (see below).           |
 
 **Google OAuth** — in the [Google Cloud Console](https://console.cloud.google.com/apis/credentials)
 create an OAuth 2.0 Client (Web application) and add this authorized redirect URI:
@@ -110,6 +112,8 @@ Open [http://localhost:3000](http://localhost:3000).
 | `pnpm db:generate` | Generate a SQL migration                      |
 | `pnpm db:migrate`  | Apply migrations                              |
 | `pnpm db:studio`   | Open Drizzle Studio                           |
+| `pnpm db:seed`     | Seed the product catalogue (brands, prices, stock) |
+| `pnpm db:seed:admins` | Seed admin emails from `ADMIN_EMAILS`      |
 | `pnpm assets`      | Download site imagery into `/public/images`   |
 
 ---
@@ -172,9 +176,39 @@ Then point `IMAGES.*` in `lib/site.ts` at local paths (e.g. `/images/hero.jpg`).
 - **CSRF** — Better Auth `trustedOrigins` derived from `BETTER_AUTH_URL` / `NEXT_PUBLIC_APP_URL`.
 - **SEO** — `app/robots.ts` and `app/sitemap.ts` (excludes `/account` and `/api`).
 
-> **Migration required:** these changes add the Better Auth `rateLimit` table and the
-> `enquiries.ip_hash` column. Run `pnpm db:push` (or `db:generate` + `db:migrate`) when
-> deploying.
+> **Migration required:** run `pnpm db:push` (or `db:generate` + `db:migrate`) when
+> deploying. Recent additions: the `admins` table; `products.brand/category/quantity`;
+> `orders.phone/address`; the Better Auth `rateLimit` table; `enquiries.ip_hash`.
+> Then `pnpm db:seed` and `pnpm db:seed:admins`.
+
+---
+
+## 🛒 Products, ordering & admin
+
+- **Products page (`/products`)** — the full brand catalogue with **search**, **filters**
+  (brand, category, price range, availability/stock) and **pagination**. Filters are
+  URL-driven (shareable) and server-rendered; the home page shows a featured preview that
+  links here.
+- **Catalogue** — products carry a `brand`, `category` and `quantity` (stock). The checkout
+  action always re-reads the price server-side, so it can't be tampered with.
+- **Ordering** — buyers must sign in. Checkout collects a **delivery phone + address**
+  (saved on the order), then runs Stripe embedded checkout. Out-of-stock items can't be
+  bought; stock is decremented when payment is confirmed (idempotent).
+- **Admin (`/admin`)** — restricted to emails in the `admins` table. Admins can edit each
+  product's **price** and **stock** inline (changes go live immediately), and review **all
+  purchases** with customer details (name, email, phone, address) plus totals (revenue,
+  orders) and per-customer spend.
+
+### Granting admin access
+
+```bash
+# .env.local
+ADMIN_EMAILS="you@example.com,ops@example.com"
+
+pnpm db:seed:admins
+```
+
+Any signed-in user whose (lowercased) email is in the `admins` table gets admin access.
 
 ---
 
